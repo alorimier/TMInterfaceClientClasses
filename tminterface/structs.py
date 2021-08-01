@@ -14,6 +14,7 @@ SIM_HAS_PLAYER_INFO = 0x80
 MODE_SIMULATION = 0
 MODE_RUN = 1
 
+
 class Event(object):
     def __init__(self, time: int, data: int):
         self.time = time
@@ -26,7 +27,7 @@ class Event(object):
     @name_index.setter
     def name_index(self, index: int):
         self.data &= 0xFFFFFF
-        self.data |= (index << 24)
+        self.data |= index << 24
 
     @property
     def binary_value(self) -> int:
@@ -63,10 +64,12 @@ class EventBufferData(object):
     def sort(self):
         self.events = sorted(self.events, key=lambda ev: ev.time, reverse=True)
 
+
 class CheckpointData(object):
     def __init__(self, cp_states: list, cp_times: list):
         self.cp_states = cp_states
         self.cp_times = cp_times
+
 
 class SimStateData(object):
     def __init__(self):
@@ -84,7 +87,7 @@ class SimStateData(object):
         self.input_running_state = Event(0, 0)
         self.input_finish_state = Event(0, 0)
         self.input_accelerate_state = Event(0, 0)
-        self.input_brake_state  = Event(0, 0)
+        self.input_brake_state = Event(0, 0)
         self.input_left_state = Event(0, 0)
         self.input_right_state = Event(0, 0)
         self.input_steer_state = Event(0, 0)
@@ -101,28 +104,28 @@ class SimStateData(object):
     def get_position(self) -> list:
         if (self.flags & SIM_HAS_DYNA) == 0:
             return [0, 0, 0]
-        
-        x = struct.unpack('f', self.dyna[500:504])[0]
-        y = struct.unpack('f', self.dyna[504:508])[0]
-        z = struct.unpack('f', self.dyna[508:512])[0]
+
+        x = struct.unpack("f", self.dyna[500:504])[0]
+        y = struct.unpack("f", self.dyna[504:508])[0]
+        z = struct.unpack("f", self.dyna[508:512])[0]
         return [x, y, z]
 
     def get_velocity(self) -> list:
         if (self.flags & SIM_HAS_DYNA) == 0:
             return [0, 0, 0]
-        
-        x = struct.unpack('f', self.dyna[512:516])[0]
-        y = struct.unpack('f', self.dyna[516:520])[0]
-        z = struct.unpack('f', self.dyna[520:524])[0]
+
+        x = struct.unpack("f", self.dyna[512:516])[0]
+        y = struct.unpack("f", self.dyna[516:520])[0]
+        z = struct.unpack("f", self.dyna[520:524])[0]
         return [x, y, z]
 
     def get_aim_direction(self) -> list:
         if (self.flags & SIM_HAS_DYNA) == 0:
             return [0, 0, 0]
-        
-        x = struct.unpack('f', self.dyna[488:492])[0]
-        y = struct.unpack('f', self.dyna[492:496])[0]
-        z = struct.unpack('f', self.dyna[496:500])[0]
+
+        x = struct.unpack("f", self.dyna[488:492])[0]
+        y = struct.unpack("f", self.dyna[492:496])[0]
+        z = struct.unpack("f", self.dyna[496:500])[0]
         return [x, y, z]
 
     # Available only in run context
@@ -136,27 +139,27 @@ class SimStateData(object):
         if (self.flags & SIM_HAS_DYNA) == 0:
             return False
 
-        self.dyna[500:504] = list(struct.pack('f', pos[0]))
-        self.dyna[504:508] = list(struct.pack('f', pos[1]))
-        self.dyna[508:512] = list(struct.pack('f', pos[2]))
+        self.dyna[500:504] = list(struct.pack("f", pos[0]))
+        self.dyna[504:508] = list(struct.pack("f", pos[1]))
+        self.dyna[508:512] = list(struct.pack("f", pos[2]))
         return True
 
     def set_velocity(self, vel: list) -> bool:
         if (self.flags & SIM_HAS_DYNA) == 0:
             return False
 
-        self.dyna[512:516] = list(struct.pack('f', vel[0]))
-        self.dyna[516:520] = list(struct.pack('f', vel[1]))
-        self.dyna[520:524] = list(struct.pack('f', vel[2]))
+        self.dyna[512:516] = list(struct.pack("f", vel[0]))
+        self.dyna[516:520] = list(struct.pack("f", vel[1]))
+        self.dyna[520:524] = list(struct.pack("f", vel[2]))
         return True
 
     def set_aim_direction(self, aim: list) -> bool:
         if (self.flags & SIM_HAS_DYNA) == 0:
             return False
 
-        self.dyna[488:492] = list(struct.pack('f', aim[0]))
-        self.dyna[492:496] = list(struct.pack('f', aim[1]))
-        self.dyna[496:500] = list(struct.pack('f', aim[2]))
+        self.dyna[488:492] = list(struct.pack("f", aim[0]))
+        self.dyna[492:496] = list(struct.pack("f", aim[1]))
+        self.dyna[496:500] = list(struct.pack("f", aim[2]))
         return True
 
     def get_race_time(self) -> int:
@@ -170,16 +173,19 @@ class SimStateData(object):
 
     @staticmethod
     def __get_int(buffer, offset: int) -> int:
-        return int.from_bytes(buffer[offset:offset+4], byteorder='little')
+        return int.from_bytes(buffer[offset : offset + 4], byteorder="little")
+
 
 class BFPhase(IntEnum):
     INITIAL = 0
     SEARCH = 1
 
+
 class BFTarget(IntEnum):
     FINISH_TIME = 0
     CHECKPOINT_TIME = 1
     TRIGGER = 2
+
 
 class BFEvaluationDecision(IntEnum):
     CONTINUE = 0
@@ -187,6 +193,7 @@ class BFEvaluationDecision(IntEnum):
     ACCEPT = 2
     REJECT = 3
     STOP = 4
+
 
 class BFEvaluationInfo(object):
     def __init__(self) -> None:
@@ -201,6 +208,7 @@ class BFEvaluationInfo(object):
         self.override_stop_time = -1
         self.search_forever = False
         self.inputs_extend_steer = False
+
 
 class BFEvaluationResponse(object):
     def __init__(self) -> None:

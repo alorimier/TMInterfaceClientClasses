@@ -7,6 +7,7 @@ import time
 
 import numpy as np
 
+
 class MainClient(Client):
     def __init__(self) -> None:
         self.current_time = 0
@@ -17,11 +18,11 @@ class MainClient(Client):
         self.phase = BFPhase.INITIAL
 
     def on_registered(self, iface: TMInterface) -> None:
-        print(f'Registered to {iface.server_name}')
-        iface.execute_command('set controller bruteforce')
-        iface.execute_command('set bf_search_forever true')
+        print(f"Registered to {iface.server_name}")
+        iface.execute_command("set controller bruteforce")
+        iface.execute_command("set bf_search_forever true")
         iface.set_timeout(60000)
-    
+
     def on_simulation_begin(self, iface):
         self.lowest_time = iface.get_event_buffer().events_duration
 
@@ -39,7 +40,7 @@ class MainClient(Client):
                     self.target_speeds = []
 
                 self.target_speeds.append(np.linalg.norm(state.get_velocity()))
-            
+
             else:
                 index = int((self.current_time - 10) / 10)
                 if index < len(self.current_speeds):
@@ -65,14 +66,16 @@ class MainClient(Client):
                 if self.current_time <= self.lowest_time:
                     self.do_accept = True
 
-def main():
-    server_name = 'TMInterface0'
-    if len(sys.argv) > 1:
-        server_name = 'TMInterface' + str(sys.argv[1])
 
-    print(f'Connecting to {server_name}...')
+def main():
+    server_name = "TMInterface0"
+    if len(sys.argv) > 1:
+        server_name = "TMInterface" + str(sys.argv[1])
+
+    print(f"Connecting to {server_name}...")
 
     iface = TMInterface(server_name)
+
     def handler(signum, frame):
         iface.close()
 
@@ -85,5 +88,6 @@ def main():
     while iface.running:
         time.sleep(0)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

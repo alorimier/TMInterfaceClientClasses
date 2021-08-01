@@ -3,9 +3,19 @@ import threading
 import time
 import mmap
 from .client import Client
-from .structs import BFEvaluationResponse, BFEvaluationInfo, BFPhase, BFTarget, Event, CheckpointData, SimStateData, EventBufferData
+from .structs import (
+    BFEvaluationResponse,
+    BFEvaluationInfo,
+    BFPhase,
+    BFTarget,
+    Event,
+    CheckpointData,
+    SimStateData,
+    EventBufferData,
+)
 from .sizes import *
 from enum import IntEnum, auto
+
 
 class MessageType(IntEnum):
     S_RESPONSE = auto()
@@ -41,12 +51,14 @@ class MessageType(IntEnum):
     C_LOG = auto()
     ANY = auto()
 
+
 RESPONSE_TOO_LONG = 1
 CLIENT_ALREADY_REGISTERED = 2
 NO_EVENT_BUFFER = 3
 NO_PLAYER_INFO = 4
 
 MAXINT32 = 2 ** 31 - 1
+
 
 class Message(object):
     def __init__(self, _type: int, error_code=0):
@@ -59,22 +71,22 @@ class Message(object):
         self.write_int32(event.data)
 
     def write_uint8(self, n):
-        self.data.extend(struct.pack('B', n))
+        self.data.extend(struct.pack("B", n))
 
     def write_int16(self, n: int):
-        self.data.extend(struct.pack('h', n))
+        self.data.extend(struct.pack("h", n))
 
     def write_uint16(self, n: int):
-        self.data.extend(struct.pack('H', n))
+        self.data.extend(struct.pack("H", n))
 
     def write_int32(self, n: int):
-        self.data.extend(struct.pack('i', n))
+        self.data.extend(struct.pack("i", n))
 
     def write_uint32(self, n: int):
-        self.data.extend(struct.pack('I', n))
+        self.data.extend(struct.pack("I", n))
 
     def write_double(self, n: float):
-        self.data.extend(struct.pack('d', n))
+        self.data.extend(struct.pack("d", n))
 
     def write_buffer(self, buffer: bytearray):
         self.data.extend(buffer)
@@ -83,7 +95,7 @@ class Message(object):
         self.data.extend(bytearray(n_bytes))
 
     def write_int(self, n, size):
-        if size  == 1:
+        if size == 1:
             self.write_uint8(n)
         elif size == 2:
             if n < 0:
@@ -91,20 +103,20 @@ class Message(object):
             else:
                 self.write_uint16(n)
         elif size == 4:
-            if n == 0xffffffff:
+            if n == 0xFFFFFFFF:
                 self.write_uint32(n)
             else:
                 self.write_int32(n)
 
     def to_data(self) -> bytearray:
-        return bytearray(struct.pack('i', self._type)) + bytearray(struct.pack('i', self.error_code)) + self.data
+        return bytearray(struct.pack("i", self._type)) + bytearray(struct.pack("i", self.error_code)) + self.data
 
     def __len__(self):
         return 8 + len(self.data)
 
 
 class TMInterface(object):
-    ''' 
+    """ 
     TMInterface is the main class to communicate with the TMInterface server.
     The communication is done through memory mapping and a simple synchronous
     message system between the server and the client. A TMInterface server
@@ -125,8 +137,9 @@ class TMInterface(object):
         mfile (mmap.mmap): the internal mapped file used for communication
         buffer_size (int): the buffer size used for communication
         client (Client): the registered client that's controlling the server
-    '''
-    def __init__(self, server_name='TMInterface0'):
+    """
+
+    def __init__(self, server_name="TMInterface0"):
         self.server_name = server_name
         self.running = True
         self.registered = False
@@ -137,7 +150,7 @@ class TMInterface(object):
         self.thread = None
         self.request_close = False
 
-    '''
+    """
     Registers a client on the server. 
     The server can only register one client at a time, if the client is already
     registered, the method will return False.
@@ -151,7 +164,8 @@ class TMInterface(object):
     
     Returns:
         True if registration was scheduled, False if client is already registered
-    '''
+    """
+
     def register(self, client: Client) -> bool:
         if self.client is not None:
             return False
@@ -169,7 +183,7 @@ class TMInterface(object):
 
         return True
 
-    '''
+    """
     Closes the connection to the server by deregistering the current client
     and shutting down the thread for communication.
 
@@ -178,7 +192,8 @@ class TMInterface(object):
 
     After a successful deregistration, Client.on_deregistered
     will be called with the instance of the TMInterface class.
-    '''
+    """
+
     def close(self):
         if self.registered:
             msg = Message(MessageType.C_DEREGISTER)
@@ -189,7 +204,7 @@ class TMInterface(object):
 
         self.running = False
 
-    '''
+    """
     Sets the timeout window in which the client has to respond to server calls.
 
     The timeout specifies how long will the server wait for a response from the client.
@@ -201,14 +216,15 @@ class TMInterface(object):
 
     Args:
         timeout_ms (int): the timeout in milliseconds
-    '''
+    """
+
     def set_timeout(self, timeout_ms: int):
         msg = Message(MessageType.C_SET_TIMEOUT)
         msg.write_int32(timeout_ms)
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Sets the global game speed, internally this simply sets the console variable
     "speed" in an TMInterface instance.
 
@@ -219,14 +235,15 @@ class TMInterface(object):
     Args:
         speed (float): the speed to set, 1 is the default normal game speed,
                        factors <1 will slow down the game while factors >1 will speed it up
-    '''
+    """
+
     def set_speed(self, speed: float):
         msg = Message(MessageType.C_SET_GAME_SPEED)
         msg.write_double(speed)
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Sets the game input state of the vehicle. 
 
     Sets individual input states for the car. If successfully applied, 
@@ -256,7 +273,8 @@ class TMInterface(object):
         down (int): the down binary input, -1 by default, 0 = disabled, 1 = enabled
         steer (int): the steer analog input, MAXINT32 by default
         gas (int): the gas analog input, MAXINT32 by default
-    '''
+    """
+
     def set_input_state(self, left=-1, right=-1, up=-1, down=-1, steer=MAXINT32, gas=MAXINT32):
         msg = Message(MessageType.C_SET_INPUT_STATES)
         msg.write_int32(left)
@@ -268,7 +286,7 @@ class TMInterface(object):
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Queues a deterministic respawn at the next race tick. This function
     will not immediately call the game to respawn the car, as TMInterface
     has to call the specific function at a specific place in the game loop.
@@ -282,14 +300,15 @@ class TMInterface(object):
     If start_respawn is set to true, respawning without any passed checkpoints will
     not restart the race, but only respawn the car on the start block, simulating
     online respawn behaviour.
-    '''
+    """
+
     def respawn(self):
         msg = Message(MessageType.C_RESPAWN)
         msg.write_int32(0)
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Adds an interface command to the internal command queue.
 
     The command will not be immediately executed, rather, it may be executed when 
@@ -297,7 +316,8 @@ class TMInterface(object):
 
     Args:
         command (str): the command to execute
-    '''
+    """
+
     def execute_command(self, command: str):
         msg = Message(MessageType.C_EXECUTE_COMMAND)
         msg.write_int32(0)
@@ -305,7 +325,7 @@ class TMInterface(object):
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Makes the game validate the replay without checking if the inputs match
     the states saved in the replay, as if it was validating a replay exported
     for validation.
@@ -315,14 +335,15 @@ class TMInterface(object):
     check if the simulation matches with saved states in the replay,
     therefore allowing for input modification without stopping
     the simulation prematurely.
-    '''
+    """
+
     def remove_state_validation(self):
         msg = Message(MessageType.C_REMOVE_STATE_VALIDATION)
         msg.write_int32(0)
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Prevents the game from stopping the simulation after a finished race.
 
     Calling this method in the on_checkpoint_count_changed will invalidate
@@ -330,14 +351,15 @@ class TMInterface(object):
     Internally this is simply setting the last checkpoint time to -1
     and can be also done manually in the client if additional handling
     is required.
-    '''
+    """
+
     def prevent_simulation_finish(self):
         msg = Message(MessageType.C_PREVENT_SIMULATION_FINISH)
         msg.write_int32(0)
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Rewinds to the provided simulation state.
 
     The method of restoring the simulation state slightly varies depending
@@ -356,7 +378,8 @@ class TMInterface(object):
 
     Args:
         state (SimStateData): the state to restore, obtained through get_simulation_state
-    '''
+    """
+
     def rewind_to_state(self, state: SimStateData):
         msg = Message(MessageType.C_SIM_REWIND_TO_STATE)
         msg.write_int32(state.version)
@@ -385,31 +408,33 @@ class TMInterface(object):
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Sets the checkpoint state of the game.
     See get_checkpoint_state to learn more about how the game stores checkpoint information.
 
     Args:
         data (CheckpointData): the checkpoint data
-    '''
+    """
+
     def set_checkpoint_state(self, data: CheckpointData):
         msg = Message(MessageType.C_SET_CHECKPOINT_STATE)
         self.__write_checkpoint_state(msg, data)
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Replaces the internal event buffer used for simulation with a new one.
 
 
     Args:
         data (EventBufferData): the new event buffer
-    '''
+    """
+
     def set_event_buffer(self, data: EventBufferData):
         msg = Message(MessageType.C_SIM_SET_EVENT_BUFFER)
         for _ in range(9):
             msg.write_int32(-1)
-            
+
         msg.write_int32(data.events_duration)
         events_tup = [(event.time, event.data) for event in data.events]
 
@@ -417,7 +442,7 @@ class TMInterface(object):
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    '''
+    """
     Gets the context mode the TMInterface instance is currently in.
 
     The context mode is determining if the current race is in
@@ -426,7 +451,8 @@ class TMInterface(object):
 
     Returns:
         int: 0 if the player is in the simulation mode, 1 if in a normal race
-    '''
+    """
+
     def get_context_mode(self) -> int:
         msg = Message(MessageType.C_GET_CONTEXT_MODE)
         self.__send_message(msg)
@@ -437,7 +463,7 @@ class TMInterface(object):
         self.__clear_buffer()
         return mode
 
-    '''
+    """
     Gets the current checkpoint state of the race.
 
     The game keeps track of two arrays that contain checkpoint information.
@@ -454,7 +480,8 @@ class TMInterface(object):
 
     Returns:
         CheckpointData that holds the two arrays representing checkpoint state
-    '''
+    """
+
     def get_checkpoint_state(self) -> CheckpointData:
         msg = Message(MessageType.C_GET_CHECKPOINT_STATE)
         self.__send_message(msg)
@@ -470,7 +497,7 @@ class TMInterface(object):
         self.__clear_buffer()
         return data
 
-    '''
+    """
     Gets the current simulation state of the race.
 
     The simulation state consists of raw memory buffers representing various
@@ -482,7 +509,8 @@ class TMInterface(object):
 
     Returns:
         SimStateData holding the simulation state
-    '''
+    """
+
     def get_simulation_state(self) -> SimStateData:
         msg = Message(MessageType.C_SIM_GET_STATE)
         self.__send_message(msg)
@@ -505,10 +533,10 @@ class TMInterface(object):
         state.internal_input_state = bytearray(self.mfile.read(INPUT_STATE_SIZE))
 
         state.input_running_state = self.__read_event()
-        state.input_finish_state  = self.__read_event()
+        state.input_finish_state = self.__read_event()
         state.input_accelerate_state = self.__read_event()
-        state.input_brake_state  = self.__read_event()
-        state.input_left_state  = self.__read_event()
+        state.input_brake_state = self.__read_event()
+        state.input_left_state = self.__read_event()
         state.input_right_state = self.__read_event()
         state.input_steer_state = self.__read_event()
         state.input_gas_state = self.__read_event()
@@ -522,7 +550,7 @@ class TMInterface(object):
         self.__clear_buffer()
         return state
 
-    '''
+    """
     Gets the internal event buffer used to hold player inputs in simulation mode.
 
     While simulating a race, the game loads the inputs from a replay file
@@ -552,7 +580,8 @@ class TMInterface(object):
 
     Returns:
         EventBufferData holding all the inputs of the current simulation
-    '''
+    """
+
     def get_event_buffer(self) -> EventBufferData:
         msg = Message(MessageType.C_SIM_GET_EVENT_BUFFER)
         self.__send_message(msg)
@@ -566,39 +595,39 @@ class TMInterface(object):
         names = [None] * 9
         _id = self.__read_int32()
         if _id != -1:
-            names[_id] = '_FakeIsRaceRunning'
-        
-        _id = self.__read_int32()
-        if _id != -1:
-            names[_id] = '_FakeFinishLine'
+            names[_id] = "_FakeIsRaceRunning"
 
         _id = self.__read_int32()
         if _id != -1:
-            names[_id] = 'Accelerate'
-            
-        _id = self.__read_int32()
-        if _id != -1:
-            names[_id] = 'Brake'
+            names[_id] = "_FakeFinishLine"
 
         _id = self.__read_int32()
         if _id != -1:
-            names[_id] = 'SteerLeft'
+            names[_id] = "Accelerate"
 
         _id = self.__read_int32()
         if _id != -1:
-            names[_id] = 'SteerRight'
+            names[_id] = "Brake"
 
         _id = self.__read_int32()
         if _id != -1:
-            names[_id] = 'Steer'
-            
-        _id = self.__read_int32()
-        if _id != -1:
-            names[_id] = 'Gas'
+            names[_id] = "SteerLeft"
 
         _id = self.__read_int32()
         if _id != -1:
-            names[_id] = 'Respawn'
+            names[_id] = "SteerRight"
+
+        _id = self.__read_int32()
+        if _id != -1:
+            names[_id] = "Steer"
+
+        _id = self.__read_int32()
+        if _id != -1:
+            names[_id] = "Gas"
+
+        _id = self.__read_int32()
+        if _id != -1:
+            names[_id] = "Respawn"
 
         data = EventBufferData(self.__read_uint32())
         data.control_names = names
@@ -606,7 +635,7 @@ class TMInterface(object):
         for item in event_data:
             ev = Event(item[0], item[1])
             data.events.append(ev)
-            
+
         self.__clear_buffer()
         return data
 
@@ -617,13 +646,13 @@ class TMInterface(object):
         self.__send_message(msg)
         self.__wait_for_server_response()
 
-    def log(self, message: str, severity='log'):
+    def log(self, message: str, severity="log"):
         severity_id = 0
-        if severity == 'success':
+        if severity == "success":
             severity_id = 1
-        elif severity == 'warning':
+        elif severity == "warning":
             severity_id = 2
-        elif severity == 'error':
+        elif severity == "error":
             severity_id = 3
 
         msg = Message(MessageType.C_LOG)
@@ -649,7 +678,7 @@ class TMInterface(object):
         resp = self.client.on_bruteforce_evaluate(self, info)
         if not resp:
             resp = BFEvaluationResponse()
-        
+
         msg = Message(MessageType.C_PROCESSED_CALL)
         msg.write_int32(msgtype)
         msg.write_int32(resp.decision)
@@ -657,12 +686,12 @@ class TMInterface(object):
         self.__send_message(msg)
 
     def __write_checkpoint_state(self, msg: Message, data: CheckpointData):
-        msg.write_int32(0) # reserved
+        msg.write_int32(0)  # reserved
         if self.__write_vector(msg, data.cp_states, 4):
             self.__write_vector(msg, data.cp_times, [4, 4])
 
     def __read_checkpoint_state(self):
-        self.__read_int32() # reserved
+        self.__read_int32()  # reserved
         cp_states = self.__read_vector(4)
         cp_times = self.__read_vector([4, 4])
 
@@ -690,7 +719,7 @@ class TMInterface(object):
             msg.write_int32(0)
             msg.error_code = RESPONSE_TOO_LONG
             return True
-        
+
         msg.write_int32(vsize)
         if is_list:
             for elem in vector:
@@ -717,7 +746,7 @@ class TMInterface(object):
                 vec.append(tuple(tup))
             else:
                 vec.append(self.__read_int(field_sizes))
-        
+
         return vec
 
     def __main_thread(self):
@@ -738,7 +767,7 @@ class TMInterface(object):
     def __process_server_message(self):
         if self.mfile is None:
             return
-        
+
         self.mfile.seek(0)
         msgtype = self.__read_int32()
         if msgtype & 0xFF00 == 0:
@@ -766,9 +795,9 @@ class TMInterface(object):
         elif msgtype == MessageType.S_ON_SIM_END:
             result = self.__read_int32()
             self.client.on_simulation_end(self, result)
-            self.__respond_to_call(msgtype)   
+            self.__respond_to_call(msgtype)
         elif msgtype == MessageType.S_ON_CHECKPOINT_COUNT_CHANGED:
-            current  = self.__read_int32()
+            current = self.__read_int32()
             target = self.__read_int32()
             self.client.on_checkpoint_count_changed(self, current, target)
             self.__respond_to_call(msgtype)
@@ -797,7 +826,7 @@ class TMInterface(object):
     def __ensure_connected(self):
         if self.mfile is not None:
             return True
-            
+
         try:
             self.mfile = mmap.mmap(-1, self.buffer_size, tagname=self.server_name)
             return True
@@ -819,7 +848,7 @@ class TMInterface(object):
         # error_code = self.__read_int32()
         # if error_code != 0:
         #     print('Got error code:', error_code)
-        
+
         # self.mfile.seek(0)
 
         if clear:
@@ -833,7 +862,7 @@ class TMInterface(object):
     def __send_message(self, message: Message):
         if self.mfile is None:
             return
-        
+
         data = message.to_data()
         self.mfile.seek(0)
         self.mfile.write(data)
@@ -860,24 +889,24 @@ class TMInterface(object):
             return self.__read_uint16()
         elif size == 4:
             return self.__read_int32()
-        
+
         return 0
 
     def __read_uint8(self):
-        return self.__read(1, 'B')
+        return self.__read(1, "B")
 
     def __read_int32(self):
-        return self.__read(4, 'i')
-    
+        return self.__read(4, "i")
+
     def __read_uint32(self):
-        return self.__read(4, 'I')
+        return self.__read(4, "I")
 
     def __read_uint16(self):
-        return self.__read(2, 'H')
+        return self.__read(2, "H")
 
     def __read_string(self):
-        chars  = [chr(b) for b in self.__read_vector(1)]
-        return ''.join(chars)
+        chars = [chr(b) for b in self.__read_vector(1)]
+        return "".join(chars)
 
     def __skip(self, n):
         self.mfile.seek(self.mfile.tell() + n)

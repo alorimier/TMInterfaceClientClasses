@@ -4,6 +4,7 @@ import sys
 import signal
 import time
 
+
 class MainClient(Client):
     def __init__(self) -> None:
         self.state = None
@@ -11,7 +12,7 @@ class MainClient(Client):
         self.simtime = 0
 
     def on_registered(self, iface: TMInterface) -> None:
-        print(f'Registered to {iface.server_name}')
+        print(f"Registered to {iface.server_name}")
 
     def on_simulation_begin(self, iface):
         iface.remove_state_validation()
@@ -27,23 +28,25 @@ class MainClient(Client):
             self.finished = False
 
     def on_checkpoint_count_changed(self, iface, current: int, target: int):
-        print(f'Reached checkpoint {current}/{target}')
+        print(f"Reached checkpoint {current}/{target}")
         if current == target:
-            print(f'Finished the race at {self.simtime - 2610}')
+            print(f"Finished the race at {self.simtime - 2610}")
             self.finished = True
             iface.prevent_simulation_finish()
 
     def on_simulation_end(self, iface, result: int):
-        print('Simulation finished')
+        print("Simulation finished")
+
 
 def main():
-    server_name = 'TMInterface0'
+    server_name = "TMInterface0"
     if len(sys.argv) > 1:
-        server_name = 'TMInterface' + str(sys.argv[1])
+        server_name = "TMInterface" + str(sys.argv[1])
 
-    print(f'Connecting to {server_name}...')
+    print(f"Connecting to {server_name}...")
 
     iface = TMInterface(server_name)
+
     def handler(signum, frame):
         iface.close()
 
@@ -56,5 +59,6 @@ def main():
     while iface.running:
         time.sleep(0)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

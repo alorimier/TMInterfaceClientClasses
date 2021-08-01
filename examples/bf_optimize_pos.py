@@ -17,11 +17,11 @@ class MainClient(Client):
         self.phase = BFPhase.INITIAL
 
     def on_registered(self, iface: TMInterface) -> None:
-        print(f'Registered to {iface.server_name}')
-        iface.execute_command('set controller bruteforce')
-        iface.execute_command('set bf_search_forever true')
+        print(f"Registered to {iface.server_name}")
+        iface.execute_command("set controller bruteforce")
+        iface.execute_command("set bf_search_forever true")
         iface.set_timeout(120000)
-    
+
     def on_simulation_begin(self, iface):
         self.lowest_time = iface.get_event_buffer().events_duration
 
@@ -60,14 +60,16 @@ class MainClient(Client):
                 if self.current_time < self.lowest_time:
                     self.force_accept = True
 
-def main():
-    server_name = 'TMInterface0'
-    if len(sys.argv) > 1:
-        server_name = 'TMInterface' + str(sys.argv[1])
 
-    print(f'Connecting to {server_name}...')
+def main():
+    server_name = "TMInterface0"
+    if len(sys.argv) > 1:
+        server_name = "TMInterface" + str(sys.argv[1])
+
+    print(f"Connecting to {server_name}...")
 
     iface = TMInterface(server_name)
+
     def handler(signum, frame):
         iface.close()
 
@@ -80,5 +82,6 @@ def main():
     while iface.running:
         time.sleep(0)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

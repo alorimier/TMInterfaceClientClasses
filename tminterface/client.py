@@ -1,5 +1,6 @@
-
 from .structs import BFEvaluationInfo, BFEvaluationResponse
+
+
 class Client(object):
     def __init__(self):
         pass
@@ -21,7 +22,7 @@ class Client(object):
 
     def on_simulation_step(self, iface, time: int):
         pass
-    
+
     def on_simulation_end(self, iface, result: int):
         pass
 
