@@ -1,6 +1,6 @@
 import time
 
-from clients.bf_client import WeightedDistanceVelocity
+from clients.weighted_distance_velocity_client import WeightedDistanceVelocity
 from conf import trigger_shape
 from tminterface.interface import TMInterface
 
