@@ -32,6 +32,7 @@ class WeightedDistanceVelocity(Client):
         self.trigger = Trigger(shape=trigger_shape)
         self.reference_run = None
         self.current_run = None
+        self.iterations = None
 
     def on_registered(self, tm_interface: TMInterface) -> None:
         print(f"Registered to {tm_interface.server_name}")
@@ -40,10 +41,12 @@ class WeightedDistanceVelocity(Client):
     def on_simulation_begin(self, tm_interface):
         """Reset the variables for a new simulation"""
         self.run_time = tm_interface.get_event_buffer().events_duration
+        self.reference_time = self.run_time
         self.initial_trigger = False
         self.init_done = False
         self.reference_run = [0 for _ in range(0, self.run_time + 10, 10)]
         self.current_run = [0 for _ in range(0, self.run_time + 10, 10)]
+        self.iterations = 0
 
     def _init_phase(self, tm_interface: TMInterface, current_time: int) -> BFEvaluationResponse:
         """ During init phase, we save the current run as a referenced run
@@ -102,6 +105,7 @@ class WeightedDistanceVelocity(Client):
 
         if current_time > self.run_time:
             response.decision = BFEvaluationDecision.REJECT
+            self.increase_iterations()
             return response
 
         simulation_state = tm_interface.get_simulation_state()
@@ -137,12 +141,23 @@ class WeightedDistanceVelocity(Client):
 
             if distance_score + velocity_score <= 0:
                 response.decision = BFEvaluationDecision.REJECT
+                self.increase_iterations()
                 return response
 
             print(
                 f"New trigger at {current_time - 10} with distance "
-                f"{saved_frame[DISTANCE_INDEX]:.6f} and velocity {saved_frame[VELOCITY_INDEX]:.6f}"
+                f"{saved_frame[DISTANCE_INDEX]:.6f} and velocity {saved_frame[VELOCITY_INDEX]:.6f} "
+                f"iterations: {self.iterations}."
             )
             response.decision = BFEvaluationDecision.ACCEPT
             self.initial_trigger = False
+            self.increase_iterations()
             return response
+        response.decision = BFEvaluationDecision.DO_NOTHING
+        return response
+
+    def increase_iterations(self):
+        self.iterations += 1
+        if self.iterations % 100 == 0:
+            print(f"{self.iterations} iterations.")
+
